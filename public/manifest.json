@@ -1,0 +1,24 @@
+{
+  "name": "VKU Field Survey — Offline Data Collection",
+  "short_name": "VKUSurvey",
+  "description": "Offline-first PWA for VKU campus facility inspections & audit reporting",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0284c7",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
