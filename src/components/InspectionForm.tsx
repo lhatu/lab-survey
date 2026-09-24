@@ -62,11 +62,13 @@ export const InspectionForm: React.FC<InspectionFormProps> = ({
   const [photoBase64, setPhotoBase64] = useState<string | undefined>(undefined);
   const [location, setLocation] = useState<GPSLocation | undefined>(undefined);
 
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [draftLoaded, setDraftLoaded] = useState<boolean>(false);
+  const [lastAutoSaveTime, setLastAutoSaveTime] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
 
-  // Load existing draft on initial render
+  // Load existing draft on initial render BEFORE enabling auto-save
   useEffect(() => {
     const loadDraftFromDB = async () => {
       try {
@@ -85,13 +87,17 @@ export const InspectionForm: React.FC<InspectionFormProps> = ({
         }
       } catch (err) {
         console.error('Error reading draft from IndexedDB:', err);
+      } finally {
+        setIsInitialized(true);
       }
     };
     loadDraftFromDB();
   }, []);
 
-  // Auto-save draft to IndexedDB on state changes
+  // Auto-save draft to IndexedDB on state changes (ONLY AFTER initialization!)
   useEffect(() => {
+    if (!isInitialized) return;
+
     const draft: SurveyDraft = {
       step,
       building,
@@ -104,8 +110,13 @@ export const InspectionForm: React.FC<InspectionFormProps> = ({
       location,
       updatedAt: new Date().toISOString(),
     };
-    saveDraft(draft).catch((err) => console.error('Failed to auto-save draft:', err));
-  }, [step, building, floor, roomNumber, category, conditionRating, defectNotes, photoBase64, location]);
+    
+    saveDraft(draft)
+      .then(() => {
+        setLastAutoSaveTime(new Date().toLocaleTimeString());
+      })
+      .catch((err) => console.error('Failed to auto-save draft:', err));
+  }, [isInitialized, step, building, floor, roomNumber, category, conditionRating, defectNotes, photoBase64, location]);
 
   const handleResetForm = async () => {
     await clearDraft();
@@ -119,6 +130,7 @@ export const InspectionForm: React.FC<InspectionFormProps> = ({
     setPhotoBase64(undefined);
     setLocation(undefined);
     setDraftLoaded(false);
+    setLastAutoSaveTime(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,6 +189,11 @@ export const InspectionForm: React.FC<InspectionFormProps> = ({
                 <Sparkles className="w-3 h-3" /> Draft Restored
               </span>
             )}
+            {lastAutoSaveTime && (
+              <span className="text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                Draft Saved ({lastAutoSaveTime})
+              </span>
+            )}
             <button
               type="button"
               onClick={handleResetForm}
@@ -223,7 +240,7 @@ export const InspectionForm: React.FC<InspectionFormProps> = ({
             Your survey has been stored into <strong>IndexedDB</strong> as{' '}
             <span className="text-amber-600 font-semibold">PENDING_SYNC</span>.
             {isOnline
-              ? ' It is dispatcing to the VKU server...'
+              ? ' It is dispatching to the VKU server...'
               : ' It will automatically sync once your connection is restored.'}
           </p>
         </div>

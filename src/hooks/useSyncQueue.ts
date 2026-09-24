@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getPendingSurveys,
   updateSurveyStatus,
@@ -14,6 +14,8 @@ export function useSyncQueue(isOnline: boolean, isSimulatedOffline: boolean) {
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [surveys, setSurveys] = useState<InspectionSurvey[]>([]);
 
+  const isSyncingRef = useRef<boolean>(false);
+
   const refreshSurveys = useCallback(async () => {
     const all = await getAllSurveys();
     setSurveys(all);
@@ -22,23 +24,22 @@ export function useSyncQueue(isOnline: boolean, isSimulatedOffline: boolean) {
   }, []);
 
   const processQueue = useCallback(async () => {
-    if (!isOnline || isSyncing) return;
+    if (!isOnline || isSyncingRef.current) return;
 
     const pendingList = await getPendingSurveys();
     if (pendingList.length === 0) {
       return;
     }
 
+    isSyncingRef.current = true;
     setIsSyncing(true);
+
     await addSyncLog({
       surveyId: 'BATCH',
       timestamp: new Date().toISOString(),
       status: 'INFO',
       message: `Starting sequential sync of ${pendingList.length} pending survey(s)...`,
     });
-
-    let successCount = 0;
-    let failCount = 0;
 
     for (const survey of pendingList) {
       try {
@@ -53,10 +54,8 @@ export function useSyncQueue(isOnline: boolean, isSimulatedOffline: boolean) {
             status: 'SUCCESS',
             message: `Survey ${survey.id.substring(0, 8)} (${survey.building} - ${survey.roomNumber}) synced to server successfully.`,
           });
-          successCount++;
         }
       } catch (err: any) {
-        failCount++;
         const errorMessage = err?.message || 'Unknown network error during server sync dispatch.';
         await updateSurveyStatus(survey.id, 'SYNC_FAILED', {
           syncErrorMessage: errorMessage,
@@ -70,17 +69,18 @@ export function useSyncQueue(isOnline: boolean, isSimulatedOffline: boolean) {
       }
     }
 
+    isSyncingRef.current = false;
     setIsSyncing(false);
     setLastSyncTime(new Date().toLocaleTimeString());
     await refreshSurveys();
-  }, [isOnline, isSimulatedOffline, isSyncing, refreshSurveys]);
+  }, [isOnline, isSimulatedOffline, refreshSurveys]);
 
-  // Trigger sync when coming back online
+  // Trigger sync when online status changes to true
   useEffect(() => {
     if (isOnline) {
       processQueue();
     }
-  }, [isOnline, processQueue]);
+  }, [isOnline]);
 
   // Initial load
   useEffect(() => {

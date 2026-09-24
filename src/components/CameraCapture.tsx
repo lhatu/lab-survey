@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
-import { Camera as CameraIcon, Image as ImageIcon, Trash2, Upload } from 'lucide-react';
+import { Camera as CameraIcon, Trash2, Upload } from 'lucide-react';
 
 interface CameraCaptureProps {
   photoBase64?: string;
@@ -15,8 +15,11 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
   const takePhotoNative = async () => {
     try {
+      // Downscale and compress native photos to 800px & 60% quality to avoid high memory/CPU usage
       const image = await Camera.getPhoto({
-        quality: 75,
+        quality: 60,
+        width: 800,
+        height: 800,
         allowEditing: false,
         resultType: CameraResultType.Base64,
         source: CameraSource.Camera,
@@ -38,7 +41,32 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
       const reader = new FileReader();
       reader.onloadend = () => {
         if (typeof reader.result === 'string') {
-          onPhotoCaptured(reader.result);
+          const img = new Image();
+          img.src = reader.result;
+          img.onload = () => {
+            // Compress fallback image using HTML Canvas
+            const canvas = document.createElement('canvas');
+            const maxDim = 800;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, width, height);
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+            onPhotoCaptured(compressedDataUrl);
+          };
         }
       };
       reader.readAsDataURL(file);

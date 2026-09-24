@@ -30,9 +30,7 @@ export const SyncDashboard: React.FC<SyncDashboardProps> = ({
 
   useEffect(() => {
     loadDashboardData();
-    const interval = setInterval(loadDashboardData, 2000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [lastSyncTime, isSyncing, pendingCount]);
 
   const handleClearLogs = async () => {
     await clearSyncLogs();
