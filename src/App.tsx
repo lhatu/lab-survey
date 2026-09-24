@@ -3,12 +3,13 @@ import { Header } from './components/Header';
 import { InspectionForm } from './components/InspectionForm';
 import { SurveyList } from './components/SurveyList';
 import { SyncDashboard } from './components/SyncDashboard';
+import { RoomBookingGrid } from './components/RoomBookingGrid';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useSyncQueue } from './hooks/useSyncQueue';
-import { ClipboardList, FileSpreadsheet, Activity, WifiOff } from 'lucide-react';
+import { ClipboardList, FileSpreadsheet, Activity, Calendar, WifiOff } from 'lucide-react';
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'FORM' | 'RECORDS' | 'QUEUE'>('FORM');
+  const [activeTab, setActiveTab] = useState<'FORM' | 'RECORDS' | 'QUEUE' | 'BOOKING'>('FORM');
   const { isOnline, realIsOnline, isSimulatedOffline, toggleSimulatedOffline } = useNetworkStatus();
   const {
     pendingCount,
@@ -37,8 +38,8 @@ export function App() {
           <WifiOff className="w-4 h-4" />
           <span>
             {isSimulatedOffline
-              ? 'SIMULATED OFFLINE MODE: Inspection submissions will be saved to IndexedDB queue as PENDING_SYNC.'
-              : 'OFFLINE MODE: No internet detected. All audits will auto-save locally to IndexedDB.'}
+              ? 'SIMULATED OFFLINE MODE: Submissions & Room Reservations will be queued into IndexedDB as PENDING_SYNC.'
+              : 'OFFLINE MODE: No internet detected. All audits & room bookings will auto-save locally.'}
           </span>
         </div>
       )}
@@ -46,10 +47,10 @@ export function App() {
       {/* Main Container */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6">
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 mb-6 border-b border-slate-200 pb-2">
+        <div className="flex items-center gap-2 mb-6 border-b border-slate-200 pb-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('FORM')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
               activeTab === 'FORM'
                 ? 'bg-sky-700 text-white shadow-sm'
                 : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
@@ -60,8 +61,20 @@ export function App() {
           </button>
 
           <button
+            onClick={() => setActiveTab('BOOKING')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+              activeTab === 'BOOKING'
+                ? 'bg-sky-700 text-white shadow-sm'
+                : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Room & Lab Booking (Realtime)</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('RECORDS')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
               activeTab === 'RECORDS'
                 ? 'bg-sky-700 text-white shadow-sm'
                 : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
@@ -73,7 +86,7 @@ export function App() {
 
           <button
             onClick={() => setActiveTab('QUEUE')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
               activeTab === 'QUEUE'
                 ? 'bg-sky-700 text-white shadow-sm'
                 : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
@@ -100,6 +113,8 @@ export function App() {
           />
         )}
 
+        {activeTab === 'BOOKING' && <RoomBookingGrid isOnline={isOnline} />}
+
         {activeTab === 'RECORDS' && (
           <SurveyList surveys={surveys} onSurveysChanged={refreshSurveys} />
         )}
@@ -119,7 +134,7 @@ export function App() {
       <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
         <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>© 2026 VKU Field Survey — Mini-Project 1 (PWA & Capacitor)</p>
-          <p className="text-slate-400">Cache-First Service Worker • IndexedDB • Native Plugins</p>
+          <p className="text-slate-400">Robin/LibCal Room Booking • Cache-First Service Worker • IndexedDB</p>
         </div>
       </footer>
     </div>
